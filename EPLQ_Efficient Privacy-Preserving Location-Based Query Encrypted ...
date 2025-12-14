@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPLQ - Efficient Privacy-Preserving Location-Based Query</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .poi-card {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .poi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .poi-name {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .poi-distance {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .status.encrypting {
+            background: #fed7aa;
+            color: #744210;
+            border: 1px solid #fdba74;
+            animation: pulse 1.5s infinite;
+        }
+
+        .encryption-info {
+            background: #bee3f8;
+            border: 1px solid #90cdf4;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>EPLQ System</h1>
+            <p class="subtitle">Efficient Privacy-Preserving Location-Based Query over Encrypted Data</p>
+        </header>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>🔍 Query Configuration</h2>
+                
+                <div class="input-group">
+                    <label for="queryType">Query Type:</label>
+                    <select id="queryType">
+                        <option value="poi">Points of Interest (POI)</option>
+                        <option value="restaurant">Restaurants</option>
+                        <option value="hospital">Hospitals</option>
+                        <option value="atm">ATMs</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="radius">Search Radius (km):</label>
+                    <input type="range" id="radius" min="0.1" max="10" step="0.1" value="2">
+                    <span id="radiusValue">2.0 km</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="privacyLevel">Privacy Level:</label>
+                    <select id="privacyLevel">
+                        <option value="high">High (Strong Encryption)</option>
+                        <option value="medium">Medium (Balanced)</option>
+                        <option value="low">Low (Fast Query)</option>
+                    </select>
+                </div>
+
+                <button id="generateQuery">🚀 Generate Encrypted Query</button>
+
+                <div id="queryStatus" class="status" style="display: none;"></div>
+                <div id="encryptionDetails" class="encryption-info" style="display: none;"></div>
+            </div>
+
+            <div class="panel">
+                <h2>📍 Interactive Map</h2>
+                <div id="map"></div>
+                <button id="getCurrentLocation" style="margin-top: 15px;">📱 Use Current Location</button>
+            </div>
+        </div>
+
+        <div class="panel" style="grid-column: 1 / -1;">
+            <h2>📊 Query Results</h2>
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalPOIs">0</div>
+                    <div>POIs Found</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="queryTime">0ms</div>
+                    <div>Query Time</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="encryptionOverhead">0%</div>
+                    <div>Encryption Overhead</div>
+                </div>
+            </div>
+
+            <div id="results" class="results"></div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated POI database (encrypted in real implementation)
+        const poiDatabase = {
+            restaurant: [
+                { id: 1, name: "Italian Bistro", lat: 40.7128, lng: -74.0060, distance: 0.8 },
+                { id: 2, name: "Sushi Haven", lat: 40.7135, lng: -74.0055, distance: 1.2 },
+                { id: 3, name: "Burger Joint", lat: 40.7110, lng: -74.0070, distance: 1.8 }
+            ],
+            hospital: [
+                { id: 4, name: "City Medical Center", lat: 40.7100, lng: -74.0040, distance: 2.1 },
+                { id: 5, name: "General Hospital", lat: 40.7150, lng: -74.0080, distance: 1.5 }
+            ],
+            atm: [
+                { id: 6, name: "Bank ATM 24/7", lat: 40.7130, lng: -74.0065, distance: 0.5 },
+                { id: 7, name: "Express ATM", lat: 40.7120, lng: -74.0050, distance: 0.9 }
+            ]
+        };
+
+        let map, marker, userLocation = { lat: 40.7128, lng: -74.0060 };
+        let queryStartTime;
+
+        // Initialize map
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 15,
+                center: userLocation,
+                mapTypeId: 'roadmap',
+                styles: [
+                    {
+                        featureType: 'poi',
+                        elementType: 'labels',
+                        stylers: [{ visibility: 'off' }]
+                    }
+                ]
+            });
+
+            marker = new google.maps.Marker({
+                position: userLocation,
+                map: map,
+                title: 'Your Location',
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: '#667eea',
+                    fillOpacity: 0.8,
+                    strokeWeight: 2,
+                    strokeColor: 'white'
+                }
+            });
+
+            // Add circle for query radius
+            const circle = new google.maps.Circle({
+                strokeColor: '#667eea',
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: '#667eea',
+                fillOpacity: 0.2,
+                map: map,
+                center: userLocation,
+                radius: 2000 // 2km default
+            });
+        }
+
+        // Update radius display
+        document.getElementById('radius').addEventListener('input', function(e) {
+            document.getElementById('radiusValue').textContent = e.target.value + ' km';
+            if (map && circle) {
+                circle.setRadius(e.target.value * 1000);
+            }
+        });
+
+        // Get current location
+        document.getElementById('getCurrentLocation').addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        map.setCenter(userLocation);
+                        marker.setPosition(userLocation);
+                        showStatus('Location updated successfully!', 'success');
+                    },
+                    () => showStatus('Unable to get location. Using default.', 'error')
+                );
+            }
+        });
+
+        // Generate encrypted query (EPLQ simulation)
+        document.getElementById('generateQuery').addEventListener('click', async () => {
+            const button = document.getElementById('generateQuery');
+            const status = document.getElementById('queryStatus');
+            const details = document.getElementById('encryptionDetails');
+
+            button.disabled = true;
+            status.style.display = 'block';
+            status.textContent = '🔐 Generating IPRE encrypted query tokens...';
+            status.className = 'status encrypting';
+            
+            queryStartTime = performance.now();
+
+            // Simulate EPLQ encryption process (IPRE + ss-tree indexing)
+            await simulateEncryption();
+            
+            // Simulate cloud query processing
+            const results = await simulateCloudQuery();
+            
+            const queryTime = Math.round(performance.now() - queryStartTime);
+            displayResults(results, queryTime);
+            
+            button.disabled = false;
+            status.className = 'status success';
+            status.textContent = `✅ Query completed in ${queryTime}ms`;
+        });
+
+        async function simulateEncryption() {
+            return new Promise(resolve => setTimeout(() => {
+                const details = document.getElementById('encryptionDetails');
+                details.style.display = 'block';
+                details.innerHTML = `
+                    <strong>IPRE Encryption Tokens Generated:</strong><br>
+                    Token Ks[0]: ${generateTokenHash('query_vector_1')}<br>
+                    Token Ks[1]: ${generateTokenHash('query_vector_2')}<br>
+                    ss-tree Index: Level-3 traversal (encrypted)<br>
+                    Privacy Range: ${document.getElementById('radius').value}km
+                `;
+                resolve();
+            }, 1500));
+        }
+
+        async function simulateCloudQuery() {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const type = document.getElementById('queryType').value;
+            const radius = parseFloat(document.getElementById('radius').value);
+            
+            return poiDatabase[type] || []
+                .map(poi => ({
+                    ...poi,
+                    encryptedMatch: true,
+                    decryptionStatus: 'verified'
+                }))
+                .filter(poi => poi.distance <= radius)
+                .slice(0, 5); // Top 5 results
+        }
+
+        function generateTokenHash(vector) {
+            return btoa(vector).slice(0, 16).toUpperCase();
+        }
+
+        function displayResults(pois, queryTime) {
+            const resultsDiv = document.getElementById('results');
+            const stats = document.getElementById('stats');
+            
+            stats.style.display = 'grid';
+            document.getElementById('totalPOIs').textContent = pois.length;
+            document.getElementById('queryTime').textContent = queryTime + 'ms';
+            document.getElementById('encryptionOverhead').textContent = Math.min(35, Math.round(queryTime / 20)) + '%';
+
+            if (pois.length === 0) {
+                resultsDiv.innerHTML = '<p style="text-align: center; color: #a0aec0;">No POIs found in the specified range.</p>';
+                return;
+            }
+
+            resultsDiv.innerHTML = pois.map(poi => `
+                <div class="poi-card">
+                    <div class="poi-name">${poi.name}</div>
+                    <div class="poi-distance">${poi.distance.toFixed(1)} km away</div>
+                    <div>✅ IPRE Decryption: Verified | ss-tree Match: Leaf Node #${poi.id}</div>
+                </div>
+            `).join('');
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('queryStatus');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        // Load Google Maps
+        function loadMapScript() {
+            const script = document.createElement('script');
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap';
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+
+        // Note: Replace YOUR_API_KEY with actual Google Maps API key
+        window.onload = loadMapScript;
+    </script>
+</body>
+</html>
